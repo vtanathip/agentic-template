@@ -1,0 +1,7 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "agent": "./src/agentic_template/agent.py:create_agent"
+  },
+  "env": ".env"
+}
