@@ -48,6 +48,19 @@ The server will be available at:
 - Interactive docs: http://localhost:8000/docs
 - Health check: http://localhost:8000/health
 
+### Running with Docker + OpenWebUI
+Start the full stack with OpenWebUI chat interface:
+```bash
+cd docker
+docker-compose up --build -d
+```
+
+This will start:
+- FastAPI server at http://localhost:8000
+- OpenWebUI chat interface at http://localhost:3000
+
+See `docker/README.md` for detailed Docker setup instructions.
+
 #### API Endpoints
 
 **POST /chat**

@@ -1,0 +1,52 @@
+services:
+  # FastAPI + LangGraph application
+  agentic-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: agentic-template-api
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app
+      - UVICORN_HOST=0.0.0.0
+      - UVICORN_PORT=8000
+    volumes:
+      - ../src:/app/src:ro # Mount source for development (read-only)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - agentic-network
+
+  # OpenWebUI for chat interface
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: agentic-openwebui
+    ports:
+      - "3000:8080"
+    environment:
+      - OPENAI_API_BASE_URL=http://agentic-api:8000
+      - OPENAI_API_KEY=dummy-key # Required but can be dummy for local APIs
+      - WEBUI_AUTH=False # Disable authentication for development
+      - WEBUI_NAME=Agentic Template Chat
+      - WEBUI_URL=http://localhost:3000
+    volumes:
+      - openwebui-data:/app/backend/data
+    depends_on:
+      agentic-api:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - agentic-network
+
+networks:
+  agentic-network:
+    driver: bridge
+
+volumes:
+  openwebui-data:
