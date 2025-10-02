@@ -6,7 +6,9 @@ Starter Kit for Building AI Agents with LangChain
 This is a simple LangGraph agent implementation using UV as the package manager. It includes:
 - A basic LangGraph agent that processes messages
 - FastAPI server to expose the agent via REST API
+- Docker setup with OpenWebUI chat interface
 - Unit tests for both the agent and server
+- Integration tests for Docker deployment
 - GitHub Actions workflow for automated testing
 - LangGraph Studio configuration
 
@@ -50,6 +52,21 @@ The server will be available at:
 
 ### Running with Docker + OpenWebUI
 Start the full stack with OpenWebUI chat interface:
+
+**Windows:**
+```bash
+cd docker
+./start-services.bat
+```
+
+**Linux/Mac:**
+```bash
+cd docker
+chmod +x start-services.sh
+./start-services.sh
+```
+
+**Or manually:**
 ```bash
 cd docker
 docker-compose up --build -d
@@ -59,7 +76,7 @@ This will start:
 - FastAPI server at http://localhost:8000
 - OpenWebUI chat interface at http://localhost:3000
 
-See `docker/README.md` for detailed Docker setup instructions.
+See `docker/README.md` for detailed Docker setup instructions and integration testing.
 
 #### API Endpoints
 
@@ -81,9 +98,21 @@ Response:
 
 ## Testing
 
-Run the test suite:
+Run the full test suite:
 ```bash
 uv run pytest tests/ -v
+```
+
+Run specific test files:
+```bash
+# Test the agent logic
+uv run pytest tests/test_agent.py -v
+
+# Test the FastAPI server
+uv run pytest tests/test_server.py -v
+
+# Run Docker integration tests
+uv run pytest docker/test_integration.py -v
 ```
 
 ## LangGraph Studio
@@ -95,17 +124,31 @@ This project includes a `langgraph.json` configuration file for use with LangGra
 ```
 .
 ├── src/
-│   └── agentic_template/
+│   ├── agentic_template/
+│   │   ├── __init__.py
+│   │   └── agent.py          # LangGraph agent implementation
+│   └── server/
 │       ├── __init__.py
-│       └── agent.py          # LangGraph agent implementation
+│       └── main.py           # FastAPI server implementation
 ├── tests/
-│   └── test_agent.py         # Unit tests
+│   ├── __init__.py
+│   ├── test_agent.py         # Agent unit tests
+│   └── test_server.py        # Server unit tests
+├── docker/
+│   ├── docker-compose.yml    # Docker orchestration
+│   ├── Dockerfile           # Container configuration
+│   ├── README.md            # Docker setup instructions
+│   ├── start-services.bat   # Windows startup script
+│   ├── start-services.sh    # Linux/Mac startup script
+│   └── test_integration.py  # Integration tests
 ├── .github/
 │   └── workflows/
 │       └── test.yml          # GitHub Actions workflow
 ├── main.py                   # Example usage
-├── pyproject.toml            # Project dependencies
-└── langgraph.json            # LangGraph Studio config
+├── run_server.py            # Server startup script
+├── pyproject.toml           # Project dependencies and config
+├── uv.lock                  # Lock file for dependencies
+└── langgraph.json           # LangGraph Studio config
 ```
 
 ## License
