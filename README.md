@@ -5,7 +5,8 @@ Starter Kit for Building AI Agents with LangChain
 
 This is a simple LangGraph agent implementation using UV as the package manager. It includes:
 - A basic LangGraph agent that processes messages
-- Unit tests for the agent
+- FastAPI server to expose the agent via REST API
+- Unit tests for both the agent and server
 - GitHub Actions workflow for automated testing
 - LangGraph Studio configuration
 
@@ -30,9 +31,39 @@ uv sync --dev
 
 ## Usage
 
+### Running the Agent Directly
 Run the example agent:
 ```bash
 uv run python main.py
+```
+
+### Running the FastAPI Server
+Start the FastAPI server to interact with the agent via REST API:
+```bash
+uv run python run_server.py
+```
+
+The server will be available at:
+- API: http://localhost:8000
+- Interactive docs: http://localhost:8000/docs
+- Health check: http://localhost:8000/health
+
+#### API Endpoints
+
+**POST /chat**
+Send a message to the agent:
+```bash
+curl -X POST "http://localhost:8000/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Hello, agent!"}'
+```
+
+Response:
+```json
+{
+  "response": "Processed: Hello, agent!",
+  "counter": 1
+}
 ```
 
 ## Testing
