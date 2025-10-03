@@ -5,12 +5,27 @@ Starter Kit for Building AI Agents with LangChain
 
 This is a simple LangGraph agent implementation using UV as the package manager. It includes:
 - A basic LangGraph agent that processes messages
+- **Multi-Agent Trading System** - A specialized system for stock market analysis
 - FastAPI server to expose the agent via REST API
 - Docker setup with OpenWebUI chat interface
 - Unit tests for both the agent and server
 - Integration tests for Docker deployment
 - GitHub Actions workflow for automated testing
 - LangGraph Studio configuration
+
+## Projects
+
+### 1. Basic Agent (`src/agentic_template/`)
+Simple LangGraph agent for general message processing.
+
+### 2. Multi-Agent Trading System (`src/multiagent_template/`)
+A specialized multi-agent system for stock market analysis featuring:
+- **NewsAgent** - Analyzes market news sentiment
+- **SocialAgent** - Monitors social media discussions  
+- **TechnicalAgent** - Performs technical analysis
+- Coordinated analysis and recommendation synthesis
+
+See [Multi-Agent Trading System README](src/multiagent_template/README.md) for detailed documentation.
 
 ## Prerequisites
 
