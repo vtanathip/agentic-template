@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Test script to verify OpenWebUI integration with FastAPI backend.
+Test script to verify OpenWebUI integration with both FastAPI backends.
+Tests both the main agentic API and the multi-agent trading system.
 """
 
 import requests
@@ -70,50 +71,92 @@ def test_chat_completions():
 
 
 def test_openwebui():
-    """Test OpenWebUI accessibility."""
+    """Test main OpenWebUI accessibility."""
     try:
         response = requests.get("http://localhost:3000", timeout=10)
         if response.status_code == 200:
-            print("✅ OpenWebUI accessibility: PASSED")
+            print("✅ Main OpenWebUI accessibility: PASSED")
             return True
         else:
             print(
-                f"❌ OpenWebUI accessibility: FAILED - HTTP {response.status_code}")
+                f"❌ Main OpenWebUI accessibility: FAILED - HTTP {response.status_code}")
             return False
     except Exception as e:
-        print(f"❌ OpenWebUI accessibility: FAILED - {e}")
+        print(f"❌ Main OpenWebUI accessibility: FAILED - {e}")
+        return False
+
+
+def test_multiagent_health():
+    """Test Multi-Agent API health endpoint."""
+    try:
+        response = requests.get("http://localhost:8001/health")
+        response.raise_for_status()
+        print("✅ Multi-Agent API health check: PASSED")
+        return True
+    except Exception as e:
+        print(f"❌ Multi-Agent API health check: FAILED - {e}")
+        return False
+
+
+def test_multiagent_openwebui():
+    """Test Multi-Agent OpenWebUI accessibility."""
+    try:
+        response = requests.get("http://localhost:3001", timeout=10)
+        if response.status_code == 200:
+            print("✅ Multi-Agent OpenWebUI accessibility: PASSED")
+            return True
+        else:
+            print(
+                f"❌ Multi-Agent OpenWebUI accessibility: FAILED - HTTP {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Multi-Agent OpenWebUI accessibility: FAILED - {e}")
         return False
 
 
 def main():
     """Run all tests."""
-    print("🧪 Testing Agentic Template + OpenWebUI Integration")
-    print("=" * 50)
+    print("🧪 Testing Agentic Template + Multi-Agent System Integration")
+    print("=" * 60)
 
-    tests = [
+    print("📋 Testing Main Agentic API (Port 8000)...")
+    main_tests = [
         test_fastapi_health,
         test_openai_models,
         test_chat_completions,
         test_openwebui,
     ]
 
-    passed = 0
-    total = len(tests)
+    print("\n📋 Testing Multi-Agent Trading System (Port 8001)...")
+    multiagent_tests = [
+        test_multiagent_health,
+        test_multiagent_openwebui,
+    ]
 
-    for test in tests:
+    all_tests = main_tests + multiagent_tests
+
+    passed = 0
+    total = len(all_tests)
+
+    for test in all_tests:
         if test():
             passed += 1
         print()
 
-    print("=" * 50)
+    print("=" * 60)
     print(f"📊 Test Results: {passed}/{total} tests passed")
 
     if passed == total:
         print("🎉 All tests passed! Your setup is working correctly.")
         print("\n🌐 Access points:")
-        print("   • FastAPI API: http://localhost:8000")
+        print("   Main Agentic Template:")
+        print("   • API Server: http://localhost:8000")
         print("   • API Documentation: http://localhost:8000/docs")
-        print("   • OpenWebUI Chat: http://localhost:3000")
+        print("   • Chat Interface: http://localhost:3000")
+        print("\n   Multi-Agent Trading System:")
+        print("   • API Server: http://localhost:8001")
+        print("   • API Documentation: http://localhost:8001/docs")
+        print("   • Chat Interface: http://localhost:3001")
     else:
         print("⚠️  Some tests failed. Please check the Docker containers and network connectivity.")
 

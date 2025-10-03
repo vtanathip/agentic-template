@@ -3,7 +3,7 @@ services:
   agentic-api:
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: docker/Dockerfile.agentic
     container_name: agentic-template-api
     ports:
       - "8000:8000"
@@ -23,7 +23,31 @@ services:
     networks:
       - agentic-network
 
-  # OpenWebUI for chat interface
+  # Multi-Agent Trading System API
+  multiagent-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.multiagent
+    container_name: agentic-multiagent-api
+    ports:
+      - "8001:8001"
+    environment:
+      - PYTHONPATH=/app
+      - UVICORN_HOST=0.0.0.0
+      - UVICORN_PORT=8001
+    volumes:
+      - ../src:/app/src:ro # Mount source for development (read-only)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - agentic-network
+
+  # OpenWebUI for main agentic chat interface
   openwebui:
     image: ghcr.io/open-webui/open-webui:main
     container_name: agentic-openwebui

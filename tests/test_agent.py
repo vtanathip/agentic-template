@@ -1,7 +1,7 @@
 """Unit tests for the LangGraph agent."""
 
 import pytest
-from agentic_template.agent import (
+from src.agentic_template.agent import (
     create_agent,
     AgentState,
     process_message,
