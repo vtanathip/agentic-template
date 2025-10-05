@@ -1,0 +1,210 @@
+"""
+FastAPI server for serving the RAG agent.
+"""
+
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+from typing import Dict, Any, Optional
+from contextlib import asynccontextmanager
+import sys
+import os
+from io import BytesIO
+
+# Add parent directories to path for imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+
+try:
+    from rag_template.rag_agent import RAGAgent
+except ImportError as e:
+    print(f"Warning: Could not import RAG agent: {e}")
+    RAGAgent = None
+
+# Global RAG agent instance
+rag_agent = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup/shutdown."""
+    # Startup
+    global rag_agent
+    try:
+        if RAGAgent:
+            rag_agent = RAGAgent()
+            print("RAG Agent initialized successfully")
+        else:
+            print("Warning: RAG Agent not available")
+    except Exception as e:
+        print(f"Error initializing RAG agent: {e}")
+
+    yield
+
+    # Shutdown (cleanup if needed)
+    pass
+
+
+class QueryRequest(BaseModel):
+    """Request model for querying documents."""
+    query: str
+
+
+class QueryResponse(BaseModel):
+    """Response model for queries."""
+    response: str
+    success: bool = True
+    error: Optional[str] = None
+
+
+class UploadResponse(BaseModel):
+    """Response model for document uploads."""
+    message: str
+    filename: str
+    success: bool = True
+    error: Optional[str] = None
+
+
+class StatsResponse(BaseModel):
+    """Response model for statistics."""
+    stats: Dict[str, Any]
+    success: bool = True
+    error: Optional[str] = None
+
+
+app = FastAPI(
+    title="RAG Agent API",
+    description="API for document upload and querying using RAG",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+
+@app.get("/")
+async def root():
+    """Health check endpoint."""
+    return {"message": "RAG Agent API is running", "status": "healthy"}
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    agent_status = "available" if rag_agent else "unavailable"
+    return {
+        "status": "healthy",
+        "rag_agent": agent_status,
+        "version": "1.0.0"
+    }
+
+
+@app.post("/upload", response_model=UploadResponse)
+async def upload_document(file: UploadFile = File(...)):
+    """Upload a document for indexing."""
+    if not rag_agent:
+        raise HTTPException(status_code=503, detail="RAG agent not available")
+
+    try:
+        # Read file content
+        content = await file.read()
+        file_like = BytesIO(content)
+
+        # Upload using RAG agent
+        filename = file.filename or "unknown_file"
+        result = rag_agent.upload_document(file_like, filename)
+
+        if result["success"]:
+            return UploadResponse(
+                message=result["message"],
+                filename=result["filename"],
+                success=True
+            )
+        else:
+            return UploadResponse(
+                message=result["message"],
+                filename=result["filename"],
+                success=False,
+                error=result["message"]
+            )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error uploading document: {str(e)}"
+        )
+
+
+@app.post("/query", response_model=QueryResponse)
+async def query_documents(request: QueryRequest):
+    """Query the document knowledge base."""
+    if not rag_agent:
+        raise HTTPException(status_code=503, detail="RAG agent not available")
+
+    try:
+        response = rag_agent.query(request.query)
+
+        # Check if response contains an error
+        if response.startswith("Error:"):
+            return QueryResponse(
+                response=response,
+                success=False,
+                error=response
+            )
+
+        return QueryResponse(
+            response=response,
+            success=True
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error querying documents: {str(e)}"
+        )
+
+
+@app.get("/stats", response_model=StatsResponse)
+async def get_stats():
+    """Get knowledge base statistics."""
+    if not rag_agent:
+        raise HTTPException(status_code=503, detail="RAG agent not available")
+
+    try:
+        stats = rag_agent.get_stats()
+        return StatsResponse(
+            stats=stats,
+            success=True
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error getting statistics: {str(e)}"
+        )
+
+
+@app.delete("/documents/{filename}")
+async def delete_document(filename: str):
+    """Delete a document from the knowledge base."""
+    if not rag_agent:
+        raise HTTPException(status_code=503, detail="RAG agent not available")
+
+    try:
+        result = rag_agent.delete_document(filename)
+
+        return JSONResponse(
+            content={
+                "success": result.get("success", False),
+                "message": result.get("message", ""),
+                "filename": filename
+            }
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error deleting document: {str(e)}"
+        )
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
