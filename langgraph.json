@@ -1,7 +1,9 @@
 {
-  "dependencies": ["."],
+  "dependencies": [
+    "."
+  ],
   "graphs": {
-    "agent": "./src/agentic_template/agent.py:create_agent"
+    "agent": "./src/rag_template/rag_agent.py:create_rag_agent"
   },
   "env": ".env"
 }
