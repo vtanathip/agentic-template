@@ -11,8 +11,9 @@ This directory contains Docker configuration for running the RAG (Retrieval-Augm
 
 ## Services Added
 
-### Core RAG Service
+### Core RAG Services
 - **rag-api**: RAG template API server (port 8001)
+- **openwebui**: Web-based chat interface (port 3000)
 
 ### Dependencies
 - **milvus-standalone**: Vector database for embeddings (port 19530)
@@ -69,15 +70,37 @@ docker-compose up -d
 - RAG API: http://localhost:8001
 - RAG API Health: http://localhost:8001/health
 - RAG API Docs: http://localhost:8001/docs
+- OpenWebUI Chat: http://localhost:3000
 - Ollama API: http://localhost:11434
 - Milvus: localhost:19530
 
 ## Usage
 
-1. Start the services
+### Web Interface (Recommended)
+1. Start the services using the script above
+2. Open http://localhost:3000 in your browser
+3. Use the OpenWebUI chat interface to interact with your RAG system
+4. Upload documents and ask questions through the web interface
+
+### API Interface (Programmatic)
+1. Start the services  
 2. Wait for health checks to pass
-3. Upload documents via `/upload` endpoint
-4. Query documents via `/query` endpoint
+3. Upload documents via POST `/upload` endpoint
+4. Query documents via POST `/query` endpoint
+5. View API documentation at http://localhost:8001/docs
+
+## Key Features
+
+### Complete RAG Experience
+- **Web Chat Interface**: User-friendly OpenWebUI at http://localhost:3000
+- **REST API**: Programmatic access at http://localhost:8001  
+- **Interactive Docs**: Auto-generated API documentation
+- **Local LLM**: Uses your local Ollama installation for privacy and performance
+
+### Both Interfaces Available
+- **OpenWebUI Chat**: Perfect for end-users and testing
+- **RAG API**: Ideal for integration and development
+- **Shared Backend**: Both use the same RAG services and data
 
 ## Environment Variables
 
@@ -96,6 +119,7 @@ For development, the source code is mounted read-only:
 
 The following volumes store persistent data:
 - `milvus-data`: Vector database data
-- `ollama-data`: Downloaded models
-- `etcd-data`: Milvus metadata
+- `etcd-data`: Milvus metadata  
 - `minio-data`: Object storage data
+
+Note: Ollama models are stored locally on your host system, not in Docker volumes.

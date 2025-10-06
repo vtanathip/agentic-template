@@ -16,17 +16,19 @@ if ! curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
     echo ""
 fi
 
-# Start core RAG services (without Ollama - using local)
+# Start core RAG services (without Ollama - using local) + OpenWebUI
 docker-compose -f docker-compose.yml up -d \
   rag-api \
   milvus-standalone \
   etcd \
-  minio
+  minio \
+  openwebui
 
 echo "RAG services are starting up..."
 echo ""
 echo "Services:"
 echo "- RAG API: http://localhost:8001"
+echo "- OpenWebUI Chat: http://localhost:3000"
 echo "- Milvus: localhost:19530"
 echo "- Local Ollama: http://localhost:11434 (external)"
 echo ""

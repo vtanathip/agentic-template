@@ -16,13 +16,14 @@ if %ERRORLEVEL% neq 0 (
     echo.
 )
 
-REM Start core RAG services (without Ollama - using local)
-docker-compose -f docker-compose.yml up -d rag-api milvus-standalone etcd minio
+REM Start core RAG services (without Ollama - using local) + OpenWebUI
+docker-compose -f docker-compose.yml up -d rag-api milvus-standalone etcd minio openwebui
 
 echo RAG services are starting up...
 echo.
 echo Services:
 echo - RAG API: http://localhost:8001
+echo - OpenWebUI Chat: http://localhost:3000
 echo - Milvus: localhost:19530
 echo - Local Ollama: http://localhost:11434 (external)
 echo.
