@@ -243,8 +243,8 @@ Answer:"""
         result = self.graph.invoke(initial_state)
 
         return {
-            "success": not bool(result.error),
-            "message": result.response or result.error,
+            "success": not bool(result.get("error")),
+            "message": result.get("response") or result.get("error", "Unknown error"),
             "filename": filename
         }
 
@@ -259,7 +259,7 @@ Answer:"""
         """
         initial_state = RAGState(query=query)
         result = self.graph.invoke(initial_state)
-        return result.response
+        return result.get("response", "No response generated")
 
     def get_stats(self) -> Dict[str, Any]:
         """Get statistics about the knowledge base."""

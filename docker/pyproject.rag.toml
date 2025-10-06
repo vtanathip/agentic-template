@@ -1,0 +1,21 @@
+[project]
+name = "rag-template"
+version = "0.1.0"
+description = "RAG Template with minimal dependencies"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
+    "langchain>=0.3.0", 
+    "langchain-core>=0.3.0",
+    "langgraph>=0.2.0",
+    "docling>=2.0.0",
+    "pymilvus>=2.4.0", 
+    "sentence-transformers>=2.2.0",
+    "ollama>=0.3.0",
+    "python-multipart>=0.0.6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

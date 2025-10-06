@@ -1,0 +1,49 @@
+# Use Python 3.12 slim image as base
+FROM python:3.12-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies (minimal for RAG template)
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install UV package manager
+RUN pip install uv
+
+# Install dependencies directly from requirements
+RUN uv pip install --system \
+    "fastapi>=0.100.0" \
+    "uvicorn>=0.23.0" \
+    "langchain>=0.3.0" \
+    "langchain-core>=0.3.0" \
+    "langgraph>=0.2.0" \
+    "docling>=2.0.0" \
+    "pymilvus>=2.4.0" \
+    "sentence-transformers>=2.2.0" \
+    "ollama>=0.3.0" \
+    "python-multipart>=0.0.6"
+
+# Copy only RAG template and server source code
+COPY src/rag_template/ ./src/rag_template/
+COPY src/server/rag_server/ ./src/server/rag_server/
+
+# Create __init__.py files if they don't exist
+RUN touch src/__init__.py src/server/__init__.py
+
+# Expose port
+EXPOSE 8001
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV UVICORN_HOST=0.0.0.0
+ENV UVICORN_PORT=8001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8001/health || exit 1
+
+# Run the RAG server
+CMD ["uv", "run", "uvicorn", "src.server.rag_server.app:app", "--host", "0.0.0.0", "--port", "8001"]

@@ -59,7 +59,12 @@ htmlcov/
 .uv-cache/
 
 # Docker
-docker/
+docker/docker-compose.yml
+docker/start-*.sh
+docker/start-*.bat
+docker/test_integration.py
+docker/README.md
+docker/README.rag.md
 Dockerfile
 .dockerignore
 
