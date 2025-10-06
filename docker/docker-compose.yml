@@ -122,6 +122,21 @@ services:
     networks:
       - agentic-network
 
+  # Attu - Milvus Web UI
+  attu:
+    image: zilliz/attu:v2.4.0
+    container_name: agentic-attu
+    ports:
+      - "9092:3000"
+    environment:
+      - MILVUS_URL=milvus-standalone:19530
+    depends_on:
+      milvus-standalone:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - agentic-network
+
   # OpenWebUI for chat interface
   openwebui:
     image: ghcr.io/open-webui/open-webui:main

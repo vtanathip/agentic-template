@@ -68,6 +68,8 @@ docker-compose up -d
 ## Endpoints
 
 - RAG API: http://localhost:8001
+- Milvus Web UI (Attu): http://localhost:9092
+- Chat Interface (OpenWebUI): http://localhost:3000
 - RAG API Health: http://localhost:8001/health
 - RAG API Docs: http://localhost:8001/docs
 - OpenWebUI Chat: http://localhost:3000
