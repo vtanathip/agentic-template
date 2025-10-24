@@ -3,10 +3,13 @@ Vector store implementation using Milvus for storing and retrieving document emb
 """
 
 import os
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, TYPE_CHECKING
 
 try:
     from pymilvus import connections, Collection, CollectionSchema, FieldSchema, DataType, utility
+    if TYPE_CHECKING:
+        # Import for type checking only - helps mypy understand the types
+        from pymilvus import Collection as CollectionType
 except ImportError:
     connections = None
     Collection = None
@@ -14,6 +17,8 @@ except ImportError:
     FieldSchema = None
     DataType = None
     utility = None
+    if TYPE_CHECKING:
+        CollectionType = None  # type: ignore
 
 
 class MilvusVectorStore:
@@ -41,7 +46,7 @@ class MilvusVectorStore:
         self.port = int(port or os.getenv("MILVUS_PORT", "19530"))
         self.collection_name = collection_name
         self.dimension = dimension
-        self.collection = None
+        self.collection: Optional["Collection"] = None  # Type hint for better IDE support
 
     def connect(self):
         """Connect to Milvus server."""
@@ -194,10 +199,14 @@ class MilvusVectorStore:
         if not self.collection:
             raise RuntimeError("Must call connect() before getting stats")
 
-        stats = self.collection.get_stats()
+        # Use num_entities instead of get_stats() which doesn't exist
+        row_count = self.collection.num_entities
+        
         return {
-            "row_count": stats["row_count"],
-            "collection_name": self.collection_name
+            "row_count": row_count,
+            "collection_name": self.collection_name,
+            "index_type": "IVF_FLAT",
+            "metric_type": "L2"
         }
 
     def disconnect(self):
