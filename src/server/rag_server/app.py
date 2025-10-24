@@ -136,7 +136,20 @@ async def upload_document(file: UploadFile = File(...)):
 
 @app.post("/query")
 async def query_documents(request: QueryRequest):
-    """Query the document knowledge base with optional streaming."""
+    """
+    Query the document knowledge base with optional streaming.
+    
+    When streaming is enabled (stream=True), returns Server-Sent Events (SSE)
+    in OpenAI-compatible format that matches the pipeline expectations:
+    {
+        "choices": [{
+            "delta": {"content": "text chunk"},
+            "finish_reason": null | "stop" | "error"
+        }]
+    }
+    
+    This format is synchronized with openwebui/pipelines/langgraph_pipeline.py
+    """
     if not rag_agent:
         raise HTTPException(status_code=503, detail="RAG agent not available")
 
@@ -148,7 +161,7 @@ async def query_documents(request: QueryRequest):
                 try:
                     # Get the response from RAG agent
                     response = rag_agent.query(request.query)
-                    
+
                     # Check if response contains an error
                     if response.startswith("Error:"):
                         error_msg = {
@@ -163,12 +176,12 @@ async def query_documents(request: QueryRequest):
                         # You can adjust chunk size as needed
                         chunk_size = 5  # words per chunk
                         words = response.split()
-                        
+
                         for i in range(0, len(words), chunk_size):
                             chunk = ' '.join(words[i:i + chunk_size])
                             if i > 0:  # Add space before subsequent chunks
                                 chunk = ' ' + chunk
-                                
+
                             chunk_msg = {
                                 'choices': [{
                                     'delta': {'content': chunk},
@@ -176,7 +189,7 @@ async def query_documents(request: QueryRequest):
                                 }]
                             }
                             yield f"data: {json.dumps(chunk_msg)}\n\n"
-                        
+
                         # Send final message
                         end_msg = {
                             'choices': [{
@@ -185,7 +198,7 @@ async def query_documents(request: QueryRequest):
                             }]
                         }
                         yield f"data: {json.dumps(end_msg)}\n\n"
-                        
+
                 except Exception as e:
                     error_msg = {
                         'choices': [{
@@ -194,12 +207,12 @@ async def query_documents(request: QueryRequest):
                         }]
                     }
                     yield f"data: {json.dumps(error_msg)}\n\n"
-            
+
             return StreamingResponse(
                 stream_response(),
                 media_type="text/event-stream"
             )
-        
+
         # Non-streaming response (original behavior)
         response = rag_agent.query(request.query)
 

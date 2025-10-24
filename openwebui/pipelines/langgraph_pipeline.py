@@ -3,10 +3,10 @@ title: LangGraph Agentic RAG Pipeline
 author: vtanathip
 author_url: https://github.com/vtanathip
 git_url: https://github.com/vtanathip/agentic-template
-description: OpenWebUI Pipeline for LangGraph Agentic RAG with streaming support
+description: OpenWebUI Pipeline for LangGraph Agentic RAG with streaming support (synced with RAG server SSE format)
 required_open_webui_version: 0.4.3
 requirements: requests
-version: 2.0.0
+version: 2.1.0
 licence: MIT
 """
 
@@ -93,6 +93,15 @@ class Pipeline:
     ) -> Generator[str, None, None]:
         """
         Stream RAG query results to the frontend.
+        
+        This method expects the RAG server to return SSE (Server-Sent Events) 
+        in OpenAI-compatible format:
+        {
+            "choices": [{
+                "delta": {"content": "text chunk"},
+                "finish_reason": null | "stop" | "error"
+            }]
+        }
 
         Args:
             user_message: The user's question
@@ -137,8 +146,18 @@ class Pipeline:
                         # Try to parse as JSON
                         chunk = json.loads(line)
 
-                        # Handle different response formats
-                        if "content" in chunk:
+                        # Handle OpenAI-compatible format (primary format from RAG server)
+                        if "choices" in chunk and isinstance(chunk["choices"], list) and len(chunk["choices"]) > 0:
+                            choice = chunk["choices"][0]
+                            if "delta" in choice and isinstance(choice["delta"], dict):
+                                content = choice["delta"].get("content", "")
+                                if content:
+                                    yield content
+                                # Check for finish reason
+                                if choice.get("finish_reason") in ["stop", "error"]:
+                                    continue
+                        # Handle alternative formats for backward compatibility
+                        elif "content" in chunk:
                             # Direct content field
                             content = chunk["content"]
                             if content:
@@ -158,9 +177,6 @@ class Pipeline:
                             content = chunk["text"]
                             if content:
                                 yield content
-                        else:
-                            # Unknown format, yield the whole thing
-                            yield str(chunk)
 
                     except json.JSONDecodeError:
                         # If not JSON, yield as plain text

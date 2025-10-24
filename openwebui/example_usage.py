@@ -3,7 +3,7 @@ Example usage of the OpenWebUI Pipeline programmatically.
 This demonstrates how the pipeline would be called by OpenWebUI.
 """
 
-from openwebui.langgraph_pipeline import Pipeline
+from openwebui.pipelines.langgraph_pipeline import Pipeline
 import sys
 import os
 
