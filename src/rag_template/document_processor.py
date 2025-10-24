@@ -70,6 +70,7 @@ class DoclingProcessor:
                     "source": filename,
                     "page_count": 1,
                     "title": filename,
+                    "document_id": filename,  # Unique document identifier
                 }
             else:
                 # Convert document using Docling
@@ -85,6 +86,7 @@ class DoclingProcessor:
                     "source": filename,
                     "page_count": len(result.document.pages) if hasattr(result.document, 'pages') else 1,
                     "title": getattr(result.document, 'title', filename),
+                    "document_id": filename,  # Unique document identifier
                 }
 
         finally:

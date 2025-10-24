@@ -188,21 +188,26 @@ class RAGAgent:
                 context = ""
                 if state.documents:
                     context_parts = []
-                    # Use top 3 results
+                    # Use top 3 results and combine them as sections of the same document
                     for i, doc in enumerate(state.documents[:3]):
-                        context_parts.append(
-                            f"Document {i+1}: {doc['text'][:500]}...")
+                        # Don't truncate, use full text for better context
+                        context_parts.append(f"Section {i+1}:\n{doc['text']}")
                     context = "\n\n".join(context_parts)
 
-                # Create prompt
-                prompt = f"""Based on the following context, answer the user's question.
+                # Create prompt with better instructions
+                prompt = f"""You are a helpful assistant that answers questions based on the provided document context.
 
-Context:
+IMPORTANT INSTRUCTIONS:
+- The context below contains sections from the SAME document (it may have been split for processing)
+- Always refer to it as "the document" or "the uploaded document", NOT as multiple documents
+- Do not mention "Document 1, 2, 3" or section numbers in your response
+- Synthesize information across all sections naturally
+- If you cannot find relevant information, say so clearly without mentioning the internal structure
+
+Context from the uploaded document:
 {context}
 
-Question: {state.query}
-
-Please provide a clear and concise answer based on the context provided. If the context doesn't contain relevant information, say so.
+User Question: {state.query}
 
 Answer:"""
 

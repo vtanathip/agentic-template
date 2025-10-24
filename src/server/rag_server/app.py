@@ -138,7 +138,7 @@ async def upload_document(file: UploadFile = File(...)):
 async def query_documents(request: QueryRequest):
     """
     Query the document knowledge base with optional streaming.
-    
+
     When streaming is enabled (stream=True), returns Server-Sent Events (SSE)
     in OpenAI-compatible format that matches the pipeline expectations:
     {
@@ -147,7 +147,7 @@ async def query_documents(request: QueryRequest):
             "finish_reason": null | "stop" | "error"
         }]
     }
-    
+
     This format is synchronized with openwebui/pipelines/langgraph_pipeline.py
     """
     if not rag_agent:

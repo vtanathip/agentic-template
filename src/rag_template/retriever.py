@@ -112,6 +112,7 @@ class DocumentRetriever:
 
         Returns:
             List of relevant document chunks with similarity scores.
+            Chunks from the same document are grouped and merged when appropriate.
         """
         try:
             self.connect()
@@ -126,7 +127,10 @@ class DocumentRetriever:
                 source_filter=source_filter
             )
 
-            return results
+            # Group consecutive chunks from the same document
+            grouped_results = self._group_consecutive_chunks(results)
+
+            return grouped_results
 
         except Exception as e:
             return [{
@@ -134,6 +138,50 @@ class DocumentRetriever:
                 "text": f"Error during search: {str(e)}",
                 "score": 0.0
             }]
+
+    def _group_consecutive_chunks(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Group consecutive chunks from the same document to provide better context.
+
+        Args:
+            results: List of search results with chunks
+
+        Returns:
+            List of results with consecutive chunks merged
+        """
+        if not results:
+            return results
+
+        grouped = []
+        current_group = None
+
+        for result in results:
+            source = result.get("source", "")
+            chunk_index = result.get("metadata", {}).get("chunk_index", -1)
+
+            if current_group is None:
+                # Start new group
+                current_group = result.copy()
+                current_group["merged_chunks"] = [chunk_index]
+            elif (current_group.get("source") == source and
+                  chunk_index in [current_group["merged_chunks"][-1] + 1,
+                                  current_group["merged_chunks"][-1] - 1]):
+                # Consecutive chunk from same document - merge it
+                current_group["text"] += "\n\n" + result["text"]
+                current_group["merged_chunks"].append(chunk_index)
+                # Use the best score
+                current_group["score"] = max(
+                    current_group["score"], result["score"])
+            else:
+                # Different document or non-consecutive chunk - save current and start new
+                grouped.append(current_group)
+                current_group = result.copy()
+                current_group["merged_chunks"] = [chunk_index]
+
+        # Add the last group
+        if current_group is not None:
+            grouped.append(current_group)
+
+        return grouped
 
     def delete_document(self, filename: str) -> Dict[str, Any]:
         """Delete all chunks from a specific document.

@@ -175,6 +175,7 @@ services:
     volumes:
       - ../openwebui/pipelines:/app/pipelines
       - pipelines-data:/app/data
+      - openwebui-data:/app/backend/data:ro # Share OpenWebUI uploads (read-only)
     restart: unless-stopped
     networks:
       - agentic-network

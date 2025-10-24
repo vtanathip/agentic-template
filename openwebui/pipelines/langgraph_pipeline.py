@@ -3,10 +3,10 @@ title: LangGraph Agentic RAG Pipeline
 author: vtanathip
 author_url: https://github.com/vtanathip
 git_url: https://github.com/vtanathip/agentic-template
-description: OpenWebUI Pipeline for LangGraph Agentic RAG with streaming support (synced with RAG server SSE format)
+description: OpenWebUI Pipeline for LangGraph Agentic RAG with streaming support and file upload capability
 required_open_webui_version: 0.4.3
 requirements: requests
-version: 2.1.0
+        version="2.3.0",  # Read files directly from shared volume instead of HTTP download
 licence: MIT
 """
 
@@ -24,6 +24,10 @@ class Pipeline:
         RAG_API_URL: str = Field(
             default="http://rag-api:8001",
             description="Base URL for the Agentic RAG API"
+        )
+        OPENWEBUI_URL: str = Field(
+            default="http://openwebui:8080",
+            description="Base URL for OpenWebUI (for downloading uploaded files)"
         )
         TIMEOUT: int = Field(
             default=120,
@@ -50,6 +54,181 @@ class Pipeline:
     async def on_valves_updated(self):
         """Called when valve parameters are updated."""
         print(f"on_valves_updated: RAG API URL: {self.valves.RAG_API_URL}")
+
+    async def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
+        """
+        Process incoming requests before they reach the pipe method.
+        This is where we handle file uploads to the RAG system.
+
+        Args:
+            body: Request body containing messages and potentially files
+            user: User information (optional)
+
+        Returns:
+            Modified body with file upload results
+        """
+        print(f"inlet: Processing request")
+        print(f"inlet: Body keys: {body.keys()}")
+
+        # Check if there are any files in the messages
+        messages = body.get("messages", [])
+        print(f"inlet: Number of messages: {len(messages)}")
+
+        for idx, message in enumerate(messages):
+            print(
+                f"inlet: Message {idx} - role: {message.get('role')}, content type: {type(message.get('content'))}")
+
+            # Handle both string and list content formats
+            content = message.get("content")
+
+            # If content is a string, check for files in body level
+            if isinstance(content, str):
+                # Check if there are files at the body level
+                if "files" in body:
+                    files_list = body.get("files", [])
+                    print(
+                        f"inlet: Found {len(files_list)} files in body.files")
+
+                    for file_info in files_list:
+                        try:
+                            print(f"📎 Found file to upload: {file_info}")
+
+                            # Get file path from OpenWebUI - it's already saved locally
+                            file_path = file_info.get(
+                                "file", {}).get("path", "")
+                            filename = file_info.get("name") or file_info.get(
+                                "file", {}).get("filename", "") or "uploaded_file"
+
+                            if not file_path:
+                                print(
+                                    f"⚠️  No file path found in: {file_info}")
+                                continue
+
+                            print(
+                                f"📤 Reading file: {filename} from {file_path}")
+
+                            # Read the file directly from disk (shared volume)
+                            try:
+                                with open(file_path, 'rb') as f:
+                                    file_content = f.read()
+                                print(
+                                    f"✅ File read successfully: {len(file_content)} bytes")
+                            except FileNotFoundError:
+                                print(f"❌ File not found at path: {file_path}")
+                                continue
+                            except Exception as read_error:
+                                print(
+                                    f"❌ Error reading file: {str(read_error)}")
+                                continue
+
+                            # Upload to RAG server
+                            upload_url = f"{self.valves.RAG_API_URL}/upload"
+                            files = {"file": (filename, file_content)}
+
+                            print(f"📤 Uploading to RAG server: {filename}")
+                            upload_response = requests.post(
+                                upload_url,
+                                files=files,
+                                timeout=self.valves.TIMEOUT
+                            )
+                            upload_response.raise_for_status()
+
+                            result = upload_response.json()
+
+                            if result.get("success"):
+                                print(
+                                    f"✅ File uploaded successfully: {filename}")
+                                # Add confirmation to message content
+                                upload_msg = f"\n\n[File '{filename}' uploaded successfully to knowledge base]"
+                                message["content"] = content + upload_msg
+                            else:
+                                error_msg = result.get(
+                                    "error", "Unknown error")
+                                print(f"❌ File upload failed: {error_msg}")
+
+                        except Exception as e:
+                            error_msg = f"Error processing file: {str(e)}"
+                            print(f"❌ {error_msg}")
+                            import traceback
+                            traceback.print_exc()
+
+            # Handle list content format (original implementation)
+            elif isinstance(content, list):
+                print(
+                    f"inlet: Message {idx} has list content with {len(content)} items")
+                for content_idx, content_item in enumerate(content):
+                    print(f"inlet: Content item {content_idx}: {content_item}")
+
+                    if isinstance(content_item, dict) and content_item.get("type") == "file":
+                        # Extract file information
+                        file_url = content_item.get("url", "")
+
+                        if file_url:
+                            try:
+                                # If URL is relative, make it absolute
+                                if file_url.startswith("/"):
+                                    file_url = f"{self.valves.OPENWEBUI_URL}{file_url}"
+
+                                print(f"📎 Found file to upload: {file_url}")
+
+                                # Download the file from the URL
+                                file_response = requests.get(
+                                    file_url, timeout=30)
+                                file_response.raise_for_status()
+
+                                # Extract filename from URL or use default
+                                filename = file_url.split(
+                                    "/")[-1] or "uploaded_file"
+
+                                # Upload to RAG server
+                                upload_url = f"{self.valves.RAG_API_URL}/upload"
+                                files = {
+                                    "file": (filename, file_response.content)
+                                }
+
+                                print(f"📤 Uploading to RAG server: {filename}")
+                                upload_response = requests.post(
+                                    upload_url,
+                                    files=files,
+                                    timeout=self.valves.TIMEOUT
+                                )
+                                upload_response.raise_for_status()
+
+                                result = upload_response.json()
+
+                                if result.get("success"):
+                                    print(
+                                        f"✅ File uploaded successfully: {filename}")
+
+                                    # Add upload confirmation to the message
+                                    upload_msg = f"\n\n[File '{filename}' uploaded successfully to knowledge base]"
+
+                                    # Find the user message and append confirmation
+                                    if message.get("role") == "user":
+                                        # Get the text content
+                                        text_content = ""
+                                        for item in message["content"]:
+                                            if isinstance(item, dict) and item.get("type") == "text":
+                                                text_content = item.get(
+                                                    "text", "")
+                                                break
+
+                                        # Update the message to include upload confirmation
+                                        message["content"] = text_content + \
+                                            upload_msg
+                                else:
+                                    error_msg = result.get(
+                                        "error", "Unknown error")
+                                    print(f"❌ File upload failed: {error_msg}")
+                                    message["content"] = f"Error uploading file: {error_msg}"
+
+                            except Exception as e:
+                                error_msg = f"Error processing file: {str(e)}"
+                                print(f"❌ {error_msg}")
+                                import traceback
+                                traceback.print_exc()
+
+        return body
 
     def pipe(
         self,
@@ -93,7 +272,7 @@ class Pipeline:
     ) -> Generator[str, None, None]:
         """
         Stream RAG query results to the frontend.
-        
+
         This method expects the RAG server to return SSE (Server-Sent Events) 
         in OpenAI-compatible format:
         {
