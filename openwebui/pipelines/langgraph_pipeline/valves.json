@@ -1,0 +1,1 @@
+{"AGENTIC_API_URL": "http://agentic-api:8000", "RAG_API_URL": "http://rag-api:8001", "USE_RAG": true, "TIMEOUT": 120}

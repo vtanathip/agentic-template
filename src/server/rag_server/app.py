@@ -3,12 +3,13 @@ FastAPI server for serving the RAG agent.
 """
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import Dict, Any, Optional
 from contextlib import asynccontextmanager
 import sys
 import os
+import json
 from io import BytesIO
 
 # Add parent directories to path for imports
@@ -47,6 +48,7 @@ async def lifespan(app: FastAPI):
 class QueryRequest(BaseModel):
     """Request model for querying documents."""
     query: str
+    stream: bool = False  # Add streaming support
 
 
 class QueryResponse(BaseModel):
@@ -132,13 +134,73 @@ async def upload_document(file: UploadFile = File(...)):
         )
 
 
-@app.post("/query", response_model=QueryResponse)
+@app.post("/query")
 async def query_documents(request: QueryRequest):
-    """Query the document knowledge base."""
+    """Query the document knowledge base with optional streaming."""
     if not rag_agent:
         raise HTTPException(status_code=503, detail="RAG agent not available")
 
     try:
+        # If streaming is requested, return StreamingResponse
+        if request.stream:
+            async def stream_response():
+                """Stream the response in SSE format."""
+                try:
+                    # Get the response from RAG agent
+                    response = rag_agent.query(request.query)
+                    
+                    # Check if response contains an error
+                    if response.startswith("Error:"):
+                        error_msg = {
+                            'choices': [{
+                                'delta': {'content': response},
+                                'finish_reason': 'error'
+                            }]
+                        }
+                        yield f"data: {json.dumps(error_msg)}\n\n"
+                    else:
+                        # Split response into chunks for streaming effect
+                        # You can adjust chunk size as needed
+                        chunk_size = 5  # words per chunk
+                        words = response.split()
+                        
+                        for i in range(0, len(words), chunk_size):
+                            chunk = ' '.join(words[i:i + chunk_size])
+                            if i > 0:  # Add space before subsequent chunks
+                                chunk = ' ' + chunk
+                                
+                            chunk_msg = {
+                                'choices': [{
+                                    'delta': {'content': chunk},
+                                    'finish_reason': None
+                                }]
+                            }
+                            yield f"data: {json.dumps(chunk_msg)}\n\n"
+                        
+                        # Send final message
+                        end_msg = {
+                            'choices': [{
+                                'delta': {},
+                                'finish_reason': 'stop'
+                            }]
+                        }
+                        yield f"data: {json.dumps(end_msg)}\n\n"
+                        
+                except Exception as e:
+                    error_msg = {
+                        'choices': [{
+                            'delta': {'content': f"Error: {str(e)}"},
+                            'finish_reason': 'error'
+                        }]
+                    }
+                    yield f"data: {json.dumps(error_msg)}\n\n"
+            
+            return StreamingResponse(
+                stream_response(),
+                media_type="text/event-stream"
+            )
+        
+        # Non-streaming response (original behavior)
         response = rag_agent.query(request.query)
 
         # Check if response contains an error

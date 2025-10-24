@@ -149,14 +149,37 @@ services:
       - WEBUI_AUTH=False # Disable authentication for development
       - WEBUI_NAME=Agentic Template Chat
       - WEBUI_URL=http://localhost:3000
+      - ENABLE_OPENAI_API=false
+      - ENABLE_OLLAMA_API=false
+      - PIPELINES_URLS=http://pipelines:9099
+      - PIPELINES_API_KEY=0p3n-w3bu!
     volumes:
       - openwebui-data:/app/backend/data
     depends_on:
       agentic-api:
         condition: service_healthy
+      pipelines:
+        condition: service_started
     restart: unless-stopped
     networks:
       - agentic-network
+
+  # OpenWebUI Pipelines server
+  pipelines:
+    image: ghcr.io/open-webui/pipelines:main
+    container_name: agentic-pipelines
+    ports:
+      - "9099:9099"
+    environment:
+      - PIPELINES_API_KEY=0p3n-w3bu!
+    volumes:
+      - ../openwebui/pipelines:/app/pipelines
+      - pipelines-data:/app/data
+    restart: unless-stopped
+    networks:
+      - agentic-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 networks:
   agentic-network:
@@ -164,6 +187,7 @@ networks:
 
 volumes:
   openwebui-data:
+  pipelines-data:
   milvus-data:
   etcd-data:
   minio-data:
