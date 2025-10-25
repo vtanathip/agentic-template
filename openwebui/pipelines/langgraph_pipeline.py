@@ -6,7 +6,7 @@ git_url: https://github.com/vtanathip/agentic-template
 description: OpenWebUI Pipeline for LangGraph Agentic RAG with streaming support and file upload capability
 required_open_webui_version: 0.4.3
 requirements: requests
-        version="2.3.0",  # Read files directly from shared volume instead of HTTP download
+        version="2.3.1",  # Added simple waiting message indicator
 licence: MIT
 """
 
@@ -271,16 +271,9 @@ class Pipeline:
         messages: List[dict]
     ) -> Generator[str, None, None]:
         """
-        Stream RAG query results to the frontend.
+        Stream RAG query results to the frontend with simple waiting indicator.
 
-        This method expects the RAG server to return SSE (Server-Sent Events) 
-        in OpenAI-compatible format:
-        {
-            "choices": [{
-                "delta": {"content": "text chunk"},
-                "finish_reason": null | "stop" | "error"
-            }]
-        }
+        Shows a static "Searching..." message, then streams the actual response.
 
         Args:
             user_message: The user's question
@@ -289,6 +282,9 @@ class Pipeline:
         Yields:
             Text chunks as they are generated
         """
+        # Show simple thinking message
+        yield "🔍 Searching documents and generating response...\n\n"
+        
         # Prepare request data
         data = {
             "query": user_message,
